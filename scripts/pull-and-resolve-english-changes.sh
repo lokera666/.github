@@ -13,36 +13,19 @@ COMMIT_MESSAGE="$2"
 # - Remote 'english' exists and points at the main Solidity repository.
 # - Working copy is clean, with no modified or untracked files.
 
-sync_branch="sync-$(git describe --tags --always english/develop)"
-
-# pass the hash and the branch name to action "create PR"
-echo "branch_name=$sync_branch" >> "$GITHUB_OUTPUT"
-
-# check if sync branch exists
-if git ls-remote --exit-code --heads origin "$sync_branch"
-then
-    branch_exists=true
-    echo "sync_branch $sync_branch exists"
-else
-    branch_exists=false
-    echo "sync_branch $sync_branch does not exist"
-fi
-
-echo "branch_exists=$branch_exists" >> "$GITHUB_OUTPUT"
-
 # Try to merge changes from the main repository. Anything changed at the same time in the translation
 # and in the main repo will result in a conflict and will make the command fail. This is fine.
 # We want to include the conflict markers as a part of the merge commit so that they're easy to spot in the PR.
 # The command will also fail if in the main repo there were modifications to files outside
 # of docs/ (these files are deleted in translation repos). These are the conflicts we want to ignore.
-if ! git merge "english/${SOLIDITY_REF}" -m "$COMMIT_MESSAGE"; then
+if ! git merge "${SOLIDITY_REF}" -m "$COMMIT_MESSAGE"; then
     # Unstage everything without aborting the merge.
     # This also "resolves" conflicts by keeping conflicted files as is including the conflict markers.
     git reset .
 
     # The only changes from the main repo that we're interested in are those in docs/ and
     # CMakeLists.txt, which is parsed by our Sphinx config to determine version. Stage them.
-    git add docs/ CMakeLists.txt
+    git add docs/ CMakeLists.txt .readthedocs.yml
 
     # Reset any files seen by git as modified/deleted to the state from before the merge.
     # We need this for files outside of docs/ that happen to match the path of some file that exists
